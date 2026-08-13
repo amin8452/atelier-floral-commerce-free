@@ -1,0 +1,110 @@
+name: atelier-floral
+
+services:
+  database:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: atelier
+      POSTGRES_USER: atelier
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-atelier-local-only}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U atelier -d atelier"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      target: api
+      args:
+        API_URL: http://api:4000
+        APP_URL: ${APP_URL:-http://localhost:3000}
+        STORE_NAME: ${STORE_NAME:-Atelier Floral}
+        STORE_DEFAULT_CURRENCY: ${STORE_DEFAULT_CURRENCY:-TND}
+        STORE_DEFAULT_LOCALE: ${STORE_DEFAULT_LOCALE:-fr-TN}
+    restart: unless-stopped
+    command: ["sh", "-c", "pnpm --filter @atelier/api prisma:deploy && pnpm --filter @atelier/api start"]
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://atelier:${POSTGRES_PASSWORD:-atelier-local-only}@database:5432/atelier?schema=public
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      API_URL: ${API_URL:-http://localhost:4000}
+      SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET must contain at least 32 random characters}
+      SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-12}
+      SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-atelier_admin_session}
+      ADMIN_BOOTSTRAP_TOKEN: ${ADMIN_BOOTSTRAP_TOKEN:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      TRUST_PROXY: ${TRUST_PROXY:-false}
+      STORE_NAME: ${STORE_NAME:-Atelier Floral}
+      STORE_DEFAULT_CURRENCY: ${STORE_DEFAULT_CURRENCY:-TND}
+      STORE_DEFAULT_LOCALE: ${STORE_DEFAULT_LOCALE:-fr-TN}
+      STORE_SHIPPING_FLAT_RATE: ${STORE_SHIPPING_FLAT_RATE:-0}
+      STORE_TAX_RATE: ${STORE_TAX_RATE:-0}
+      CONSENT_POLICY_VERSION: ${CONSENT_POLICY_VERSION:-2026-01}
+      CART_TTL_DAYS: ${CART_TTL_DAYS:-30}
+      LOW_STOCK_THRESHOLD: ${LOW_STOCK_THRESHOLD:-5}
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
+      UPLOAD_DIR: /workspace/data/uploads
+      UPLOAD_PUBLIC_PATH: /uploads
+      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-5242880}
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_REGION: ${S3_REGION:-auto}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-}
+      S3_PUBLIC_URL: ${S3_PUBLIC_URL:-}
+      S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
+      EMAIL_MODE: ${EMAIL_MODE:-disabled}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      SELLER_NOTIFICATION_EMAIL: ${SELLER_NOTIFICATION_EMAIL:-}
+      PAYMENT_MODE: cash_on_delivery
+      WHATSAPP_NUMBER: ${WHATSAPP_NUMBER:-}
+    ports:
+      - "4000:4000"
+    volumes:
+      - uploads:/workspace/data/uploads
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  storefront:
+    build:
+      context: .
+      target: storefront
+      args:
+        API_URL: http://api:4000
+        APP_URL: ${APP_URL:-http://localhost:3000}
+        STORE_NAME: ${STORE_NAME:-Atelier Floral}
+        STORE_DEFAULT_CURRENCY: ${STORE_DEFAULT_CURRENCY:-TND}
+        STORE_DEFAULT_LOCALE: ${STORE_DEFAULT_LOCALE:-fr-TN}
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      API_URL: http://api:4000
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      STORE_NAME: ${STORE_NAME:-Atelier Floral}
+      STORE_DEFAULT_CURRENCY: ${STORE_DEFAULT_CURRENCY:-TND}
+      STORE_DEFAULT_LOCALE: ${STORE_DEFAULT_LOCALE:-fr-TN}
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:
+  uploads:

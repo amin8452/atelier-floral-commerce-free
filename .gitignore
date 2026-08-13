@@ -1,0 +1,15 @@
+node_modules
+.next
+dist
+coverage
+.env
+.env.local
+.env.*.local
+!.env.example
+apps/api/src/generated/prisma
+*.log
+.runtime/
+*.tsbuildinfo
+.DS_Store
+data/uploads/*
+!data/uploads/.gitkeep

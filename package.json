@@ -1,0 +1,28 @@
+{
+  "name": "atelier-floral-commerce",
+  "private": true,
+  "packageManager": "pnpm@10.15.0",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "corepack pnpm --parallel --filter @atelier/api --filter @atelier/storefront dev",
+    "build": "corepack pnpm db:generate && corepack pnpm -r --if-present build",
+    "lint": "corepack pnpm -r lint",
+    "typecheck": "corepack pnpm -r typecheck",
+    "test": "corepack pnpm -r test",
+    "test:coverage": "corepack pnpm -r --if-present test:coverage",
+    "db:generate": "corepack pnpm --filter @atelier/api prisma:generate",
+    "db:migrate": "corepack pnpm --filter @atelier/api prisma:migrate",
+    "db:deploy": "corepack pnpm --filter @atelier/api prisma:deploy"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.0",
+    "eslint": "^9.39.0",
+    "eslint-config-next": "^16.3.0",
+    "globals": "^16.4.0",
+    "typescript-eslint": "^8.46.0",
+    "vitest": "^3.2.4",
+    "@vitest/coverage-v8": "^3.2.4"
+  }
+}
