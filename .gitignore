@@ -13,3 +13,5 @@ apps/api/src/generated/prisma
 .DS_Store
 data/uploads/*
 !data/uploads/.gitkeep
+apps/storefront/AGENTS.md
+apps/storefront/CLAUDE.md

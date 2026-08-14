@@ -1,203 +1,224 @@
-# Atelier Floral Commerce
+# Atelier Floral
 
-Boutique e-commerce auto-hébergeable pour créations florales artisanales. Le monorepo fournit un storefront Next.js, une API NestJS, PostgreSQL/Prisma, une administration RBAC, un panier, un checkout transactionnel, des leads, des commandes, une médiathèque locale ou S3 et des analytics internes.
+Atelier Floral est une boutique e-commerce complète pour vendre des créations artisanales en résine : bijoux, fleurs conservées et pièces personnalisées.
 
-Aucune donnée commerciale fictive n’est injectée. Une installation neuve affiche des états vides jusqu’à la saisie des paramètres, médias et produits.
+Le projet contient deux espaces bien séparés :
 
-## Prérequis
+- une boutique publique pour découvrir les produits, rechercher un modèle, gérer un panier et commander ;
+- une administration pour gérer le catalogue, les commandes, le stock, les clients, les promotions et les paramètres de la boutique.
 
-- Node.js 22.12 ou ultérieur ;
-- Corepack et pnpm 10 ;
-- PostgreSQL 17 ou Docker Compose ;
-- Windows, Linux ou macOS.
+Le dépôt ne contient ni faux catalogue ni identifiants administrateur. Après une première installation, la boutique est vide jusqu'à l'ajout des produits et de leurs photos.
 
-## Installation locale
+## Fonctionnalités principales
 
-~~~bash
+### Boutique
+
+- accueil éditorial et responsive ;
+- catalogue avec recherche, filtres, tri et pagination ;
+- fiches produit avec galerie, variantes et personnalisation ;
+- panier persistant et calcul des prix côté serveur ;
+- commande avec paiement à la livraison ;
+- formulaire de contact et demandes liées à un produit ;
+- liens WhatsApp configurables ;
+- SEO, sitemap et données structurées.
+
+### Administration
+
+- tableau de bord avec indicateurs et graphiques ;
+- gestion des produits, photos, catégories et collections ;
+- mise à jour rapide de l'état d'un produit ;
+- gestion du stock et alertes de stock faible ;
+- suivi et finalisation des commandes ;
+- gestion des clients, demandes, promotions et utilisateurs ;
+- corbeille produit avec délai de suppression de 24 heures ;
+- rôles, sessions sécurisées et journal d'audit.
+
+## Technologies
+
+| Partie | Technologies |
+| --- | --- |
+| Interface | Next.js 16, React 19, TypeScript |
+| API | NestJS 11, TypeScript |
+| Base de données | PostgreSQL 17, Prisma 7 |
+| Tests | Vitest |
+| Déploiement local | Docker Compose ou Node.js/pnpm |
+
+## Organisation du projet
+
+```text
+apps/
+  storefront/       Boutique publique et administration Next.js
+  api/              API REST NestJS et logique métier
+packages/
+  shared/           Types et fonctions partagés
+data/
+  uploads/          Photos enregistrées localement, non versionnées
+```
+
+Le navigateur communique avec `/backend/api`. Next.js relaie ces appels vers l'API NestJS. L'API reste responsable des prix, du stock, des promotions, des commandes et des autorisations. Cette séparation évite de faire confiance aux valeurs envoyées par le navigateur.
+
+## Démarrage rapide avec Docker
+
+### 1. Prérequis
+
+- Git ;
+- Docker Desktop avec Docker Compose.
+
+### 2. Préparer la configuration
+
+Clonez le dépôt et placez-vous dans son dossier :
+
+```bash
+git clone https://github.com/amin8452/atelier-floral-commerce-free.git
+cd atelier-floral-commerce-free
+```
+
+Créez le fichier local de configuration :
+
+```bash
+cp .env.example .env
+```
+
+Sous PowerShell, utilisez plutôt :
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Dans `.env`, remplacez au minimum les valeurs suivantes :
+
+```env
+POSTGRES_PASSWORD=un-mot-de-passe-solide
+SESSION_SECRET=une-valeur-aleatoire-de-32-caracteres-minimum
+ADMIN_BOOTSTRAP_TOKEN=un-jeton-temporaire-long-et-aleatoire
+```
+
+Ne publiez jamais le fichier `.env`.
+
+### 3. Lancer le projet
+
+```bash
+docker compose up --build
+```
+
+Quand les services sont prêts :
+
+- boutique : <http://localhost:3000>
+- administration : <http://localhost:3000/admin>
+- API : <http://localhost:4000/api>
+- contrôle de santé : <http://localhost:4000/api/health>
+
+### 4. Créer le premier administrateur
+
+La création est autorisée uniquement si aucun administrateur n'existe encore. Remplacez le jeton et les informations du compte dans cette commande :
+
+```bash
+curl -X POST http://localhost:4000/api/auth/bootstrap \
+  -H "Origin: http://localhost:3000" \
+  -H "Content-Type: application/json" \
+  -H "x-bootstrap-token: VOTRE_JETON" \
+  --data '{"email":"admin@example.com","password":"une-phrase-secrete-de-12-caracteres","firstName":"Admin"}'
+```
+
+Le compte reçoit le rôle `SUPER_ADMIN`. Après sa création, videz `ADMIN_BOOTSTRAP_TOKEN` dans `.env`, puis redémarrez l'API.
+
+### 5. Préparer la boutique
+
+Connectez-vous à `/admin`, puis procédez dans cet ordre :
+
+1. vérifiez les paramètres de la boutique ;
+2. ajoutez les catégories et collections ;
+3. ajoutez les photos ;
+4. créez les produits et leur stock ;
+5. passez les produits à l'état actif pour les publier.
+
+## Installation sans Docker
+
+Prérequis supplémentaires : Node.js 22.12 ou plus récent, Corepack et PostgreSQL 17.
+
+```bash
 corepack enable
 corepack pnpm install
 cp .env.example .env
-~~~
+```
 
-Créez la base et son rôle PostgreSQL, puis adaptez DATABASE_URL dans .env :
+Créez une base PostgreSQL, adaptez `DATABASE_URL` dans `.env`, puis exécutez :
 
-~~~sql
-CREATE USER atelier WITH PASSWORD 'change-me';
-CREATE DATABASE atelier OWNER atelier;
-~~~
-
-Appliquez ensuite les migrations versionnées et démarrez les deux applications :
-
-~~~bash
+```bash
 corepack pnpm db:deploy
 corepack pnpm dev
-~~~
+```
 
-- boutique : http://localhost:3000
-- API : http://localhost:4000/api
-- santé : http://localhost:4000/api/health
-- administration : http://localhost:3000/admin
+Les deux applications démarrent ensemble sur les ports `3000` et `4000`.
 
-## Premier administrateur
+## Commandes utiles
 
-Renseignez temporairement ADMIN_BOOTSTRAP_TOKEN avec une valeur aléatoire longue. Tant qu’aucun administrateur n’existe :
+```bash
+corepack pnpm dev            # lancer le frontend et l'API
+corepack pnpm build          # construire les applications
+corepack pnpm lint           # contrôler la qualité du code
+corepack pnpm typecheck      # contrôler les types TypeScript
+corepack pnpm test           # lancer tous les tests
+corepack pnpm test:coverage  # générer la couverture des tests
+corepack pnpm db:generate    # régénérer le client Prisma
+corepack pnpm db:migrate     # créer une migration en développement
+corepack pnpm db:deploy      # appliquer les migrations existantes
+```
 
-~~~bash
-curl -X POST http://localhost:4000/api/auth/bootstrap +  -H "Origin: http://localhost:3000" +  -H "Content-Type: application/json" +  -H "x-bootstrap-token: VOTRE_JETON" +  -d '{"email":"admin@example.com","password":"une-phrase-secrete-de-12-caracteres","firstName":"Admin"}'
-~~~
+## Configuration importante
 
-Le compte créé est SUPER_ADMIN. Retirez ensuite ADMIN_BOOTSTRAP_TOKEN de l’environnement et redémarrez l’API. L’endpoint refuse toute seconde initialisation.
+Toutes les variables disponibles sont documentées dans `.env.example`.
 
-## Architecture
+- `APP_URL` et `API_URL` définissent les adresses publiques ;
+- `SESSION_SECRET` protège les sessions administrateur ;
+- `CORS_ORIGINS` limite les sites autorisés à appeler l'API ;
+- `STORAGE_DRIVER=local` conserve les photos dans `data/uploads` ;
+- `STORAGE_DRIVER=s3` permet d'utiliser S3, Cloudflare R2 ou MinIO ;
+- `EMAIL_MODE=disabled` désactive les e-mails sans bloquer les commandes ;
+- `PAYMENT_MODE=cash_on_delivery` active le paiement à la livraison ;
+- `WHATSAPP_NUMBER` définit le numéro utilisé par les boutons de contact.
 
-~~~text
-apps/storefront   Next.js App Router, boutique et administration
-apps/api          API REST NestJS et domaines métier
-packages/shared   statuts, formatage monétaire et liens WhatsApp
-data/uploads      médias locaux, hors code exécutable
-~~~
+Les photos placées dans `data/uploads` et les données PostgreSQL ne sont pas enregistrées dans Git. Elles doivent être sauvegardées séparément en production.
 
-Le navigateur appelle /backend/api sur le même domaine. Next.js relaie vers l’API, ce qui conserve les cookies HttpOnly et évite d’exposer une URL interne. L’API reste la seule source de vérité pour prix, promotions, stock, permissions, totaux et statuts.
+## Sécurité et règles métier
 
-Consultez [ARCHITECTURE.md](./ARCHITECTURE.md) pour les modules et les flux.
+- mots de passe hachés avec `scrypt` et sessions opaques en cookie HttpOnly ;
+- permissions vérifiées par l'API selon le rôle administrateur ;
+- validation stricte des formulaires et limitation du nombre de requêtes ;
+- contrôle du type, de la signature et de la taille des images ;
+- prix, promotions et stock recalculés côté serveur ;
+- création de commande transactionnelle et protégée contre les doublons ;
+- aucune simulation de paiement en ligne.
 
-## Frontend
+## Méthode de travail Git
 
-Le storefront comprend :
+La branche `main` représente la version stable. Les modifications quotidiennes se font sur `dev` :
 
-- accueil, nouveautés, collections et storytelling ;
-- boutique filtrée, triée et paginée ;
-- page produit, galerie, variantes, personnalisation et Schema.org Product ;
-- panier persistant par jeton opaque ;
-- checkout et confirmation non fondée sur les paramètres d’URL ;
-- formulaires produit et contact sauvegardés comme leads ;
-- WhatsApp alimenté uniquement par StoreSettings ;
-- SEO dynamique, canonical, Open Graph, robots et sitemap ;
-- états loading, vide, succès et erreur ;
-- interface responsive, navigation clavier et préférence reduced-motion.
+```bash
+git switch dev
+git pull
 
-L’administration propose commandes, produits, collections, catégories, clients, leads, stocks, promotions, médias et paramètres. Les liens sont filtrés selon le rôle, mais chaque permission est également revérifiée par l’API.
+# après les modifications et les tests
+git add .
+git commit -m "type: description claire"
+git push origin dev
+```
 
-## Backend
+Une fois `dev` validée, ouvrez une pull request vers `main`. Évitez de développer directement sur `main`.
 
-Les domaines NestJS sont séparés : auth, settings, products, categories, collections, media, carts, pricing, promotions, leads, notifications, orders, payments, customers, inventory et analytics.
+## Problèmes fréquents
 
-Mesures principales :
+- **L'API ne démarre pas :** vérifiez `DATABASE_URL`, PostgreSQL et la longueur de `SESSION_SECRET`.
+- **Un produit n'apparaît pas :** il doit être actif, publié, posséder une photo et avoir du stock.
+- **Les images sont absentes :** vérifiez `UPLOAD_DIR`, les permissions du dossier et `API_URL`.
+- **La connexion admin échoue en production :** utilisez HTTPS et vérifiez la configuration du proxy.
+- **Un e-mail n'est pas envoyé :** la commande reste enregistrée ; contrôlez `EMAIL_MODE` et les paramètres SMTP.
 
-- DTO stricts, propriétés inconnues rejetées ;
-- sessions opaques hachées en base et cookies HttpOnly/SameSite ;
-- scrypt salé pour les mots de passe ;
-- RBAC SUPER_ADMIN, ADMIN, ORDER_MANAGER, PRODUCT_MANAGER et SUPPORT ;
-- contrôle Origin sur les mutations ;
-- CORS en liste blanche, Helmet et rate limiting ;
-- noms d’upload UUID, allowlist MIME/extension, signature binaire et taille maximale ;
-- filtres d’erreurs sans stack trace ou détails internes ;
-- journal d’audit pour les opérations sensibles.
+## Avant une mise en production
 
-## PostgreSQL et Prisma
-
-La migration initiale se trouve dans apps/api/prisma/migrations. Elle crée les relations, index, contraintes uniques et contraintes CHECK sur stocks, quantités, prix, promotions et montants.
-
-Commandes :
-
-~~~bash
-corepack pnpm db:generate
-corepack pnpm db:migrate   # développement, crée une migration
-corepack pnpm db:deploy    # CI et production, applique les migrations existantes
-~~~
-
-La production ne dépend jamais de prisma db push.
-
-## Variables d’environnement
-
-Copiez .env.example. Les variables indispensables sont DATABASE_URL, APP_URL, API_URL, SESSION_SECRET, CORS_ORIGINS, STORE_NAME, STORE_DEFAULT_CURRENCY, STORE_DEFAULT_LOCALE et CONSENT_POLICY_VERSION.
-
-En production :
-
-- utilisez au moins 32 caractères aléatoires pour SESSION_SECRET ;
-- utilisez HTTPS afin d’activer le cookie Secure ;
-- limitez CORS_ORIGINS aux domaines réels ;
-- activez TRUST_PROXY uniquement derrière un proxy de confiance ;
-- ne commitez jamais .env.
-
-## Images
-
-Le mode par défaut stocke les fichiers dans data/uploads :
-
-~~~env
-STORAGE_DRIVER=local
-UPLOAD_DIR=data/uploads
-UPLOAD_PUBLIC_PATH=/uploads
-MAX_UPLOAD_BYTES=5242880
-~~~
-
-Pour S3, R2 ou MinIO, passez STORAGE_DRIVER à s3 et renseignez les variables S3_* de .env.example. Sauvegardez à la fois PostgreSQL et les fichiers du stockage local.
-
-## Email
-
-EMAIL_MODE=disabled ne bloque jamais la création d’un lead. Avec EMAIL_MODE=smtp, toutes les variables SMTP sont obligatoires. Le service envoie une notification au vendeur et, si une adresse client a été fournie, une confirmation au client. Un échec SMTP est journalisé sans supprimer le lead.
-
-## WhatsApp
-
-Le projet utilise des liens wa.me préremplis, sans API payante. Le numéro public vient de StoreSettings. Depuis un lead, l’administration ouvre une conversation vers le numéro du client et ajoute l’événement à la timeline.
-
-## Paiements
-
-Le mode livré est le paiement à la livraison, sans commission logicielle :
-
-~~~env
-PAYMENT_MODE=cash_on_delivery
-~~~
-
-PaymentProvider isole le domaine de commande du prestataire. L’option de paiement en ligne reste désactivée tant qu’un fournisseur réel, sa vérification serveur et son webhook signé/idempotent ne sont pas intégrés. Aucun succès de paiement n’est simulé.
-
-## Calcul et concurrence
-
-Le serveur recharge les produits et variantes, calcule le prix effectif, applique la promotion, la livraison et la taxe, puis crée la commande dans une transaction Serializable. Le stock est décrémenté par une mise à jour conditionnelle stock >= quantité. Si deux checkouts visent le dernier article, un seul peut aboutir. Une annulation admissible restitue le stock et l’utilisation du code promotionnel.
-
-La clé Idempotency-Key empêche la création en double d’une commande.
-
-## Tests et contrôles
-
-~~~bash
-corepack pnpm lint
-corepack pnpm typecheck
-corepack pnpm test
-corepack pnpm test:coverage
-corepack pnpm build
-~~~
-
-Les tests couvrent notamment mots de passe et sessions, permissions, création produit, validation/persistance lead, panier cumulé, calculs financiers, promotions, concurrence de stock et transitions de commande.
-
-## Docker Compose
-
-Après avoir défini SESSION_SECRET dans .env :
-
-~~~bash
-docker compose up --build
-~~~
-
-Compose démarre PostgreSQL, applique les migrations, vérifie la santé de l’API puis démarre le storefront. Les volumes postgres_data et uploads sont persistants. Docker n’est pas requis pour l’installation native.
-
-## Déploiement
-
-1. construisez une image immuable ;
-2. configurez les secrets dans le gestionnaire de l’hébergeur ;
-3. exécutez db:deploy une seule fois avant la nouvelle API ;
-4. montez un volume persistant pour data/uploads ou configurez S3 ;
-5. placez API et storefront derrière HTTPS ;
-6. surveillez /api/health et centralisez les logs ;
-7. testez régulièrement la restauration des sauvegardes.
-
-## Dépannage
-
-- DATABASE_URL absent : Prisma peut générer le client, mais l’API et les migrations exigent une URL PostgreSQL valide.
-- Origine non autorisée : vérifiez APP_URL et CORS_ORIGINS, protocole inclus.
-- Images absentes : vérifiez UPLOAD_DIR, les droits du volume et API_URL.
-- Cookie admin absent en production : utilisez HTTPS et vérifiez le proxy.
-- Notification non envoyée : le lead reste en base ; contrôlez EMAIL_MODE et les paramètres SMTP.
-- Produit non visible : son statut doit être ACTIVE et sa date de publication atteinte.
-
-## Coût et limites
-
-Le mode local n’impose aucun service cloud payant. Le domaine, l’hébergement, l’électricité, le transport, un SMTP externe ou un prestataire bancaire restent des coûts externes possibles. Voir [FREE_MODE_AUDIT.md](./FREE_MODE_AUDIT.md).
+- utiliser HTTPS ;
+- générer des secrets uniques et longs ;
+- appliquer les migrations avec `pnpm db:deploy` ;
+- sauvegarder PostgreSQL et les images ;
+- configurer un stockage persistant ;
+- surveiller `/api/health` et les journaux de l'API.
